@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Sitetracker Scheduler 2.0 Prototype</title>
+    <style>
+        :root {
+            --st-bg: #f0f2f5;
+            --st-teal-dark: #1e4544;
+            --st-blue: #d1e9ff;
+            --st-blue-border: #7ab8e0;
+            --st-blue-text: #1b5e8a;
+            --st-green: #4caf50;
+            --st-amber: #f5a623;
+            --st-red: #d32f2f;
+            --st-text: #2c3e50;
+            --grid-line: #e8e8e8;
+            --header-bg: #e8f5f3;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--st-bg); color: var(--st-text); }
+
+        .top-nav {
+            background: var(--st-teal-dark);
+            color: white;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            height: 48px;
+            gap: 24px;
+            font-size: 13px;
+        }
+        .logo { font-size: 16px; font-weight: 700; letter-spacing: 2px; margin-right: 12px; }
+        .logo span { font-size: 10px; letter-spacing: 0; display: block; margin-top: -2px; }
+        .nav-items { display: flex; gap: 4px; flex: 1; }
+        .nav-items a { color: rgba(255,255,255,0.85); text-decoration: none; padding: 6px 10px; border-radius: 4px; font-size: 12.5px; white-space: nowrap; }
+        .nav-items a:hover { background: rgba(255,255,255,0.1); }
+        .nav-items a.active { background: rgba(255,255,255,0.18); color: white; font-weight: 600; }
+        .nav-right { display: flex; align-items: center; gap: 12px; }
+        .nav-badge { background: #e0e0e0; color: #333; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: 600; }
+        .nav-icon { width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 14px; }
+        .nav-avatar { width: 30px; height: 30px; border-radius: 50%; background: #5bb5b0; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 13px; }
+
+        .beta-banner {
+            background: #e8f5e9;
+            border-bottom: 1px solid #c8e6c9;
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 12.5px;
+        }
+        .beta-tag { background: var(--st-teal-dark); color: white; padding: 3px 10px; border-radius: 4px; font-size: 11px; font-weight: 600; flex-shrink: 0; }
+        .beta-banner .beta-text { flex: 1; color: #555; }
+        .beta-banner .feedback-btn { border: 1px solid #999; background: white; padding: 5px 16px; border-radius: 4px; font-size: 12px; cursor: pointer; flex-shrink: 0; }
+        .beta-banner .close-btn { cursor: pointer; font-size: 18px; color: #999; padding: 0 4px; }
+
+        .toolbar {
+            background: white;
+            border-bottom: 1px solid #ddd;
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .tool-group { display: flex; align-items: center; border: 1px solid #ccc; border-radius: 4px; overflow: hidden; }
+        .tool-btn { padding: 5px 12px; font-size: 12px; cursor: pointer; background: white; border: none; border-right: 1px solid #ccc; display: flex; align-items: center; gap: 4px; }
+        .tool-btn:last-child { border-right: none; }
+        .tool-btn.active { background: var(--st-teal-dark); color: white; }
+        .tool-select { padding: 5px 10px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; background: white; margin-left: 8px; }
+        .tool-icon-btn { width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 4px; font-size: 16px; }
+        .spacer { flex: 1; }
+        .date-nav { display: flex; align-items: center; gap: 4px; }
+        .date-nav button { background: white; border: 1px solid #ccc; padding: 4px 8px; cursor: pointer; border-radius: 3px; font-size: 12px; }
+        .date-nav .date-range { padding: 5px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px; background: white; }
+
+        .main-layout {
+            display: flex;
+            height: calc(100vh - 130px);
+        }
+
+        .jobs-panel {
+            width: 180px;
+            border-right: 1px solid #ddd;
+            background: white;
+            display: flex;
+            flex-direction: column;
+        }
+        .panel-header {
+            padding: 10px 12px;
+            font-weight: 600;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #eee;
+        }
+        .panel-header .collapse { cursor: pointer; font-size: 16px; color: #999; }
+        .search-box {
+            margin: 8px;
+            padding: 6px 8px 6px 28px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 12px;
+            background: white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='%23999' viewBox='0 0 24 24'%3E%3Cpath d='M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z'/%3E%3C/svg%3E") 8px center no-repeat;
+            width: calc(100% - 16px);
+        }
+        .filter-row { display: flex; gap: 4px; padding: 4px 8px; }
+        .filter-icon { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer; color: #888; border-radius: 3px; }
+        .filter-icon:hover { background: #eee; }
+        .jobs-list { flex: 1; overflow-y: auto; }
+        .job-item { padding: 10px 12px; border-bottom: 1px solid #f0f0f0; font-size: 11.5px; cursor: pointer; }
+        .job-item:hover { background: #f5f8ff; }
+        .job-item .job-title { font-weight: 600; color: #1a73e8; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .job-item .job-meta { color: #888; font-size: 11px; }
+
+        .scheduler-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .resource-toolbar {
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid #eee;
+            background: white;
+        }
+        .resource-toolbar .label { font-weight: 600; font-size: 13px; }
+        .res-search {
+            padding: 5px 8px 5px 26px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 12px;
+            width: 140px;
+            background: white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23999' viewBox='0 0 24 24'%3E%3Cpath d='M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z'/%3E%3C/svg%3E") 6px center no-repeat;
+        }
+
+        .grid-wrapper { flex: 1; overflow: auto; position: relative; }
+        .grid {
+            display: grid;
+            grid-template-columns: 200px repeat(7, minmax(110px, 1fr));
+            min-width: 100%;
+        }
+
+        .grid-header {
+            position: sticky; top: 0; z-index: 20;
+            background: var(--header-bg);
+            padding: 12px 8px; text-align: center;
+            font-weight: 600; font-size: 13px; color: var(--st-teal-dark);
+            border-bottom: 2px solid #ccc; border-right: 1px solid var(--grid-line);
+        }
+        .grid-header:first-child { text-align: left; padding-left: 16px; }
+        .grid-header.today { background: #d0ece8; }
+
+        .grid-group {
+            grid-column: 1 / -1;
+            padding: 6px 16px; font-size: 12px; font-weight: 600;
+            color: #555; background: #fafafa; border-bottom: 1px solid var(--grid-line);
+        }
+
+        .grid-resource {
+            padding: 12px 12px; border-bottom: 1px solid var(--grid-line);
+            border-right: 2px solid var(--grid-line); font-size: 12px;
+            background: white; display: flex; gap: 8px; align-items: flex-start;
+        }
+        .res-icon {
+            width: 22px; height: 22px; border-radius: 50%;
+            background: var(--st-teal-dark); color: white;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 10px; font-weight: 700; flex-shrink: 0; margin-top: 1px;
+        }
+        .res-info { flex: 1; min-width: 0; }
+        .res-name { font-weight: 600; font-size: 13px; margin-bottom: 2px; }
+        .res-detail { font-size: 11px; color: #888; line-height: 1.5; }
+        .res-detail .queue { color: var(--st-teal-dark); font-weight: 600; }
+
+        .grid-cell {
+            border-bottom: 1px solid var(--grid-line);
+            border-right: 1px solid var(--grid-line);
+            position: relative; min-height: 90px; background: white;
+        }
+        .grid-cell.today { background: #f5fbfa; }
+
+        /* ─── JOB BAR BASE ─── */
+        .job-bar {
+            position: absolute; top: 12px; left: 4px; right: 4px;
+            height: 56px; border-radius: 5px; padding: 8px 10px;
+            font-size: 11px; cursor: pointer;
+            transition: all 0.15s; z-index: 10; overflow: hidden;
+        }
+        .job-bar:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.18); z-index: 30; }
+
+        .job-bar .bar-dates { font-weight: 700; font-size: 11.5px; }
+        .job-bar .bar-id { font-size: 10.5px; margin-top: 1px; }
+        .job-bar .bar-crew { font-size: 10px; margin-top: 2px; display: flex; align-items: center; gap: 4px; }
+        .bar-avatars { display: flex; }
+        .bar-avatar {
+            width: 18px; height: 18px; border-radius: 50%;
+            border: 1.5px solid white;
+            display: inline-flex; align-items: center; justify-content: center;
+            font-size: 8px; color: white; font-weight: 600; margin-right: -4px;
+        }
+
+        /* Spanning helpers */
+        .span-start { right: -1px; border-right: none; border-top-right-radius: 0; border-bottom-right-radius: 0; }
+        .span-mid   { left: 0; right: -1px; border-left: none; border-right: none; border-radius: 0; }
+        .span-end   { left: 0; border-left: none; border-top-left-radius: 0; border-bottom-left-radius: 0; }
+
+        /* ─── 1. SCHEDULED (Blue) ─── */
+        .bar-scheduled {
+            background: var(--st-blue);
+            border: 1px solid var(--st-blue-border);
+        }
+        .bar-scheduled .bar-dates { color: var(--st-blue-text); }
+        .bar-scheduled .bar-id { color: #5a9cc5; }
+        .bar-scheduled .bar-crew { color: #5a9cc5; }
+        .bar-scheduled .bar-avatar { background: #5a9cc5; }
+
+        /* ─── 2. COMPLETED-BUT-OVERDUE (green with faded planned zone) ─── */
+        .bar-overdue-planned {
+            background: repeating-linear-gradient(
+                -45deg,
+                #e0f0ee,
+                #e0f0ee 6px,
+                #cce5e1 6px,
+                #cce5e1 12px
+            );
+            border: 1px dashed #90c5bb;
+        }
+        .bar-overdue-planned .bar-dates { color: #7aaa9f; }
+        .bar-overdue-planned .bar-id { color: #90b5ad; }
+
+        .bar-overdue-actual {
+            background: #c5e8e4;
+            border: 1px solid #8ccfc4;
+        }
+        .bar-overdue-actual .bar-dates { color: var(--st-teal-dark); }
+        .bar-overdue-actual .bar-id { color: #4a7c75; }
+        .bar-overdue-actual .bar-crew { color: #5a8a84; }
+        .bar-overdue-actual .bar-avatar { background: #5bb5b0; }
+
+        /* amber left-edge on the first actual day */
+        .bar-overdue-actual .cap-late-start {
+            position: absolute; left: 0; top: 0; bottom: 0; width: 6px;
+            background: var(--st-amber); border-radius: 0;
+        }
+
+        /* ─── 3. VARIANCE CAPS (same-day, amber left + red right) ─── */
+        .bar-variance {
+            background: var(--st-blue);
+            border: 1px solid var(--st-blue-border);
+            padding-left: 16px; padding-right: 16px;
+        }
+        .bar-variance .bar-dates { color: var(--st-blue-text); }
+        .bar-variance .bar-id { color: #5a9cc5; }
+        .bar-variance .bar-avatar { background: #5a9cc5; }
+        .cap-amber {
+            position: absolute; left: 0; top: 0; bottom: 0; width: 7px;
+            background: var(--st-amber); border-radius: 5px 0 0 5px;
+        }
+        .cap-red {
+            position: absolute; right: 0; top: 0; bottom: 0; width: 7px;
+            background: var(--st-red); border-radius: 0 5px 5px 0;
+        }
+
+        /* ─── 4. GHOST / STALE (hollow, dashed) ─── */
+        .bar-ghost {
+            background: repeating-linear-gradient(
+                45deg,
+                #ffffff,
+                #ffffff 8px,
+                #f5f5f5 8px,
+                #f5f5f5 16px
+            );
+            border: 2px dashed #bbb;
+            color: #999;
+        }
+        .bar-ghost .bar-dates { color: #999; }
+        .bar-ghost .bar-id { color: #aaa; }
+        .bar-ghost .bar-crew { color: #aaa; }
+        .bar-ghost .bar-avatar { background: #bbb; }
+
+        /* ─── LEGEND ─── */
+        .legend {
+            grid-column: 1 / -1;
+            padding: 14px 16px;
+            display: flex; gap: 24px; align-items: center;
+            font-size: 11.5px; color: #666;
+            background: #fafafa; border-top: 1px solid var(--grid-line);
+        }
+        .legend-item { display: flex; align-items: center; gap: 6px; }
+        .legend-swatch {
+            width: 32px; height: 16px; border-radius: 3px; flex-shrink: 0;
+        }
+        .swatch-blue { background: var(--st-blue); border: 1px solid var(--st-blue-border); }
+        .swatch-overdue {
+            background: linear-gradient(90deg, #e0f0ee 40%, #c5e8e4 40%);
+            border: 1px solid #8ccfc4;
+        }
+        .swatch-variance {
+            background: linear-gradient(90deg, var(--st-amber) 15%, var(--st-blue) 15%, var(--st-blue) 85%, var(--st-red) 85%);
+            border: 1px solid var(--st-blue-border);
+        }
+        .swatch-ghost {
+            background: repeating-linear-gradient(45deg, #fff, #fff 4px, #f0f0f0 4px, #f0f0f0 8px);
+            border: 2px dashed #bbb;
+        }
+
+        /* ─── TOOLTIP ─── */
+        .tooltip {
+            display: none; position: fixed;
+            background: #2a2a2a; color: white;
+            padding: 12px 14px; border-radius: 8px;
+            width: 240px; z-index: 9999;
+            box-shadow: 0 8px 28px rgba(0,0,0,0.35);
+            font-size: 12px; line-height: 1.7;
+            pointer-events: none;
+        }
+        .tooltip::before {
+            content: ''; position: absolute; top: -7px; left: 24px;
+            border-left: 7px solid transparent; border-right: 7px solid transparent;
+            border-bottom: 7px solid #2a2a2a;
+        }
+        .tt-label { color: #999; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 6px; }
+        .tt-amber { color: #f5a623; }
+        .tt-red { color: #ef5350; }
+        .tt-green { color: #66bb6a; }
+        .tt-dim { color: #999; }
+    </style>
+</head>
+<body>
+
+<nav class="top-nav">
+    <div class="logo">SITETRACKER<span>Sitetracker</span></div>
+    <div class="nav-items">
+        <a href="#">Sites</a>
+        <a href="#">Project Templates</a>
+        <a href="#">Projects</a>
+        <a href="#">Job Scheduler</a>
+        <a href="#">Finance</a>
+        <a href="#">Trackers</a>
+        <a href="#">Jobs</a>
+        <a href="#">Field Assets</a>
+        <a href="#">Map</a>
+        <a href="#">Reports</a>
+        <a href="#">Dashboards</a>
+        <a href="#">Job Templates</a>
+        <a href="#" class="active">Job Scheduler 2.0 (Beta)</a>
+        <a href="#">More</a>
+    </div>
+    <div class="nav-right">
+        <span class="nav-badge">EPT: 0 s</span>
+        <span class="nav-badge">ART: 0 s</span>
+        <span class="nav-icon">⚡</span>
+        <span class="nav-icon">🔔</span>
+        <span class="nav-icon">❓</span>
+        <span class="nav-icon">⚙</span>
+        <span class="nav-avatar">CN</span>
+    </div>
+</nav>
+
+<div class="beta-banner">
+    <span class="beta-tag">Beta Feature</span>
+    <span class="beta-text"><strong>How can we improve Job Scheduler 2.0 (Beta)?</strong> Sitetracker is actively seeking feedback from you on this new feature. Let us know what you like, what you dislike, and what features you'd like to see.</span>
+    <button class="feedback-btn">📤 Send Feedback</button>
+    <span class="close-btn">✕</span>
+</div>
+
+<div class="toolbar">
+    <div class="tool-group">
+        <button class="tool-btn active">📅 Schedule</button>
+        <button class="tool-btn">🗺 Map</button>
+        <button class="tool-btn">▦ Split Screen</button>
+    </div>
+    <select class="tool-select"><option>None</option></select>
+    <span class="tool-icon-btn">⚙</span>
+    <div class="spacer"></div>
+    <div class="tool-group">
+        <button class="tool-btn active">Weekly</button>
+    </div>
+    <div class="date-nav">
+        <button>«</button>
+        <button>‹</button>
+        <span class="date-range">2/3/2026 – 8/3/2026 📅</span>
+        <button>›</button>
+        <button>»</button>
+    </div>
+</div>
+
+<div class="main-layout">
+
+    <div class="jobs-panel">
+        <div class="panel-header">Jobs <span class="collapse">«</span></div>
+        <input class="search-box" placeholder="Search Jobs">
+        <div class="filter-row">
+            <span class="filter-icon">▼</span>
+            <span class="filter-icon">↕</span>
+        </div>
+        <div class="jobs-list">
+            <div class="job-item"><div class="job-title">Emergency Repair - Boiler - D… · Assigned</div><div class="job-meta">Assigned · Low</div></div>
+            <div class="job-item"><div class="job-title">Emergency Repair - Electrical… · Assigned</div><div class="job-meta">Assigned · Medium</div></div>
+            <div class="job-item"><div class="job-title">Emergency Repair - Electrical… · Assigned</div><div class="job-meta">Assigned · Low</div></div>
+            <div class="job-item"><div class="job-title">Emergency Repair - Elevator … · Assigned</div><div class="job-meta">Assigned · High</div></div>
+            <div class="job-item"><div class="job-title">Emergency Repair - Fire Alar… · Assigned</div><div class="job-meta">Assigned · High</div></div>
+            <div class="job-item"><div class="job-title">Emergency Repair - Fire Alar… · Assigned</div><div class="job-meta">Assigned · High</div></div>
+            <div class="job-item"><div class="job-title">Emergency Repair - Lighting … · Assigned</div><div class="job-meta">Assigned · High</div></div>
+            <div class="job-item"><div class="job-title">Emergency Repair - Plumbing… · Assigned</div><div class="job-meta">Assigned · High</div></div>
+        </div>
+    </div>
+
+    <div class="scheduler-area">
+        <div class="resource-toolbar">
+            <span class="label">Resources</span>
+            <input class="res-search" placeholder="Search Resources">
+            <span class="filter-icon">▦</span>
+            <span class="filter-icon">☰</span>
+            <span class="filter-icon">▼</span>
+            <span class="filter-icon">↕</span>
+        </div>
+        <div class="grid-wrapper">
+            <div class="grid">
+
+                <!-- Header Row -->
+                <div class="grid-header"></div>
+                <div class="grid-header today">Mon, 02 Mar</div>
+                <div class="grid-header">Tue, 03 Mar</div>
+                <div class="grid-header">Wed, 04 Mar</div>
+                <div class="grid-header">Thu, 05 Mar</div>
+                <div class="grid-header">Fri, 06 Mar</div>
+                <div class="grid-header">Sat, 07 Mar</div>
+                <div class="grid-header">Sun, 08 Mar</div>
+
+                <div class="grid-group">— Crews</div>
+
+                <!-- ════════════════════════════════════════════
+                     ROW 1 — SCHEDULED (Blue)
+                     Normal scheduled job, Tue–Thu
+                     ════════════════════════════════════════════ -->
+                <div class="grid-resource">
+                    <div class="res-icon" style="background:#4caf50;">✓</div>
+                    <div class="res-info">
+                        <div class="res-name">Ash Crew</div>
+                        <div class="res-detail"><span class="queue">Jobs in Queue: 3</span></div>
+                    </div>
+                </div>
+                <div class="grid-cell today"></div>
+                <div class="grid-cell">
+                    <div class="job-bar bar-scheduled span-start"
+                         data-tooltip="scheduled"
+                         data-tt-title="J-002247"
+                         data-tt-body='<span class="tt-label">Status</span><br><strong>Scheduled</strong> — On Track<br><span class="tt-label">Planned</span><br>Tue 03 Mar → Thu 05 Mar<br><span class="tt-label">Crew</span><br>Ash Crew'>
+                        <div class="bar-dates">03/03 – 05/03</div>
+                        <div class="bar-id">J-002247</div>
+                        <div class="bar-crew"><span class="bar-avatars"><span class="bar-avatar">A</span><span class="bar-avatar">C</span></span></div>
+                    </div>
+                </div>
+                <div class="grid-cell">
+                    <div class="job-bar bar-scheduled span-mid"></div>
+                </div>
+                <div class="grid-cell">
+                    <div class="job-bar bar-scheduled span-end"></div>
+                </div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+
+                <!-- ════════════════════════════════════════════
+                     ROW 2 — COMPLETED BUT OVERDUE
+                     Scheduled Mon 02, tech arrived Tue 03, completed Wed 04.
+                     Mon = hatched "no-show" zone.
+                     Tue–Wed = solid actual work, amber cap on Tue left edge.
+                     ════════════════════════════════════════════ -->
+                <div class="grid-resource">
+                    <div class="res-icon" style="background:#4caf50;">✓</div>
+                    <div class="res-info">
+                        <div class="res-name">Ash Commu…</div>
+                        <div class="res-detail">
+                            My Working Hours<br>Acme<br>
+                            Person · Ash Community<br>
+                            <span class="queue">Jobs in Queue: 26</span>
+                        </div>
+                    </div>
+                </div>
+                <!-- Mon 02: hatched planned-but-no-show -->
+                <div class="grid-cell today">
+                    <div class="job-bar bar-overdue-planned span-start"
+                         data-tooltip="overdue"
+                         data-tt-title="J-3345"
+                         data-tt-body='<span class="tt-label">Status</span><br><span class="tt-green">✔ Completed</span> — but overdue<br><span class="tt-label">Originally Scheduled</span><br>Mon 02 Mar<br><span class="tt-label">What Happened</span><br><span class="tt-amber">⚠ Tech did not arrive on 02 Mar.</span><br>Tech arrived <strong>Tue 03 Mar</strong>.<br>Job completed <strong>Wed 04 Mar</strong>.<br><span class="tt-label">Variance</span><br>+1 day late start · +1 day overrun'>
+                        <div class="bar-dates" style="opacity:0.6">02/03 (Planned)</div>
+                        <div class="bar-id" style="opacity:0.6">J-3345 — No show</div>
+                    </div>
+                </div>
+                <!-- Tue 03: actual start, amber cap on left -->
+                <div class="grid-cell">
+                    <div class="job-bar bar-overdue-actual span-mid" style="border-left:1px solid #8ccfc4;">
+                        <div class="cap-late-start"></div>
+                        <div class="bar-dates" style="padding-left:8px;">03/03 – 04/03</div>
+                        <div class="bar-id" style="padding-left:8px;">J-3345 — Tech arrived</div>
+                        <div class="bar-crew" style="padding-left:8px;">
+                            <span class="bar-avatars"><span class="bar-avatar">T</span></span> Commu Crew
+                        </div>
+                    </div>
+                </div>
+                <!-- Wed 04: actual end -->
+                <div class="grid-cell">
+                    <div class="job-bar bar-overdue-actual span-end"></div>
+                </div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+
+                <!-- ════════════════════════════════════════════
+                     ROW 3 — VARIANCE CAPS (same-day)
+                     Amber left = tech started late.
+                     Red right = tech ended late / overtime.
+                     ════════════════════════════════════════════ -->
+                <div class="grid-resource">
+                    <div class="res-icon" style="background:#4caf50;">✓</div>
+                    <div class="res-info">
+                        <div class="res-name">Ash Field</div>
+                        <div class="res-detail">
+                            My Working Hours<br>Person · Ash Admin<br>
+                            <span class="queue">Jobs in Queue: 31</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid-cell today"></div>
+                <div class="grid-cell">
+                    <div class="job-bar bar-variance"
+                         data-tooltip="variance"
+                         data-tt-title="J-4456"
+                         data-tt-body='<span class="tt-label">Status</span><br><strong>Completed</strong> — with variance<br><span class="tt-label">Efficiency Alert</span><br><span class="tt-amber">● Late Start</span> — Tech arrived 45 min late<br><span class="tt-red">● Overtime</span> — Job ended 1.5 hrs past window<br><span class="tt-label">Scheduled</span><br>Tue 03 Mar · 8:00 AM – 4:00 PM<br><span class="tt-label">Actual</span><br>Tue 03 Mar · 8:45 AM – 5:30 PM'>
+                        <div class="cap-amber"></div>
+                        <div class="cap-red"></div>
+                        <div class="bar-dates">03/03</div>
+                        <div class="bar-id">J-4456 — Repair</div>
+                        <div class="bar-crew"><span class="bar-avatars"><span class="bar-avatar">F</span></span> Ash Field</div>
+                    </div>
+                </div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+
+                <!-- ════════════════════════════════════════════
+                     ROW 4 — GHOST / STALE (incomplete, needs reschedule)
+                     Hollow, dashed, grayed out.
+                     ════════════════════════════════════════════ -->
+                <div class="grid-resource">
+                    <div class="res-icon">C</div>
+                    <div class="res-info">
+                        <div class="res-name">Crew</div>
+                        <div class="res-detail"><span class="queue">Jobs in Queue: 0</span></div>
+                    </div>
+                </div>
+                <div class="grid-cell today">
+                    <div class="job-bar bar-ghost"
+                         data-tooltip="ghost"
+                         data-tt-title="J-5567 🌙"
+                         data-tt-body='<span class="tt-label">Status</span><br><span class="tt-dim">Incomplete</span> — Stale<br><span class="tt-label">What Happened</span><br>Clock hit 5:00 PM on Mon 02 Mar without job completion. Job was not finished.<br><span class="tt-label">Action Required</span><br><span class="tt-red">⚠ This job needs to be rescheduled.</span><br>Drag to a new date or reassign crew.'>
+                        <div class="bar-dates">02/03</div>
+                        <div class="bar-id">J-5567 🌙 — Incomplete</div>
+                        <div class="bar-crew"><span class="bar-avatars"><span class="bar-avatar" style="background:#bbb;">?</span></span> Unfinished</div>
+                    </div>
+                </div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+
+                <!-- Legend -->
+                <div class="legend">
+                    <strong style="color:#444;">Legend:</strong>
+                    <div class="legend-item"><div class="legend-swatch swatch-blue"></div> Scheduled</div>
+                    <div class="legend-item"><div class="legend-swatch swatch-overdue"></div> Completed (Overdue)</div>
+                    <div class="legend-item"><div class="legend-swatch swatch-variance"></div> Variance (Late Start / Overtime)</div>
+                    <div class="legend-item"><div class="legend-swatch swatch-ghost"></div> Stale / Incomplete</div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+    const tooltip = document.getElementById('tooltip');
+
+    document.querySelectorAll('.job-bar[data-tooltip]').forEach(bar => {
+        bar.addEventListener('mouseenter', e => {
+            const title = bar.getAttribute('data-tt-title');
+            const body  = bar.getAttribute('data-tt-body');
+            tooltip.innerHTML = '<strong style="font-size:13px;">' + title + '</strong><br>' + body;
+            tooltip.style.display = 'block';
+
+            const rect = bar.getBoundingClientRect();
+            let left = rect.left;
+            let top  = rect.bottom + 10;
+
+            if (left + 240 > window.innerWidth) left = window.innerWidth - 260;
+            if (top + 200 > window.innerHeight) top = rect.top - tooltip.offsetHeight - 10;
+
+            tooltip.style.left = left + 'px';
+            tooltip.style.top  = top + 'px';
+        });
+
+        bar.addEventListener('mouseleave', () => {
+            tooltip.style.display = 'none';
+        });
+    });
+</script>
+
+</body>
+</html>
